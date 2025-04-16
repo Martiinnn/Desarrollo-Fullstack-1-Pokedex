@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Precarga al CDN de tailwind css para el estilado -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Titulo Pagina -->
+    <title>Pokedex Tarea</title>
+    <!-- Conexion a google fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <!-- Fin google lol -->
+</head>
+<body class="monserrat" >
+    <!-- Header de la pagina -->
+    <header class="bg-red-600 text-white py-6 shadow-lg">
+        <!-- Titulo principal con colores del duoc -->
+        <h1 class="text-4xl font-bold text-center">PokeDex 
+        <span class="text-amber-400">Duoc</span><span class="text-[#001F3F]">UC</span></h1>
+        <!-- Subtitulo -->
+        <p class="text-center mt-2">Los primeros 151 Pokemones</p>
+    </header>
+
+    <!-- DIV principal -->
+    <div class="container mx-auto px-4 py-8" >
+
+        <!-- Búsqueda por nombre -->
+        <div class="flex-1">
+            <input 
+                type="text" 
+                id="palabra-filtro" 
+                placeholder="Buscar por nombre..." 
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+        </div>
+
+        <!-- Div para mostrar mientras se reciben los datos de la api -->
+        <div id="loading" class="text-center mt-64">
+            <div class="w-12 h-12 border-4 border-gray-300 border-t-red-600 rounded-full mx-auto animate-[spin_1s_linear_infinite]"></div>
+            <p class="mt-4 text-lg">Cargando Pokémones...</p>
+        </div>
+
+        <!-- Contenedores de los pokemones -->
+        <div id="pokemon-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mt-8">
+            <!-- Aqui van los pokemones -->
+        </div>
+
+        <div id="stats-container" class="fixed inset-0 bg-black/50 bg-opacity-50 hidden flex items-center justify-center flex-col">
+            <div class="pokeball"></div>
+            <div id="pokemon-info" class="mt-6 bg-white p-6 rounded-lg max-w-md mx-auto opacity-0 transition-opacity duration-500">
+                <h2 id="stats-pokemon-name" class="text-2xl font-bold text-center capitalize mb-4"></h2>
+                <div class="flex justify-center mb-4">
+                    <img id="stats-pokemon-image" alt="" class="w-48 h-48 object-contain">
+                </div>
+                <div id="stats-pokemon-types" class="flex gap-2 justify-center mb-4"></div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="text-center">
+                        <p class="text-gray-600">Altura</p>
+                        <p id="stats-pokemon-height" class="font-semibold"></p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-gray-600">Peso</p>
+                        <p id="stats-pokemon-weight" class="font-semibold"></p>
+                    </div>
+                </div>
+                <div id="stats-pokemon-stats" class="space-y-2"></div>
+            </div>
+            <button id="close-stats" class="mt-4 bg-white rounded-full p-2 shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+</div>
+</body>
+
+<script>
+    // Array para guardar los pokemones 
+    let todosLosPokemones = [];
+
+    // Una vez todo el contenido haya cargado entra aqui :v
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Creamos los containers de los pokemones y hacemos referencia al loading para ocultarlo desps
+        const pokemonContainer = document.getElementById('pokemon-container');
+        const loading = document.getElementById('loading');
+
+        // Try-catch para consultar la api
+        try {
+            const respuesta = await fetch("https://pokeapi.co/api/v2/pokemon?limit=151");
+            const pokemones = await respuesta.json();
+            // Mapeamos los pokemones para obtener sus datos
+            const data = pokemones.results.map(pokemon => 
+                fetch(pokemon.url).then(res => res.json())
+            );            
+
+            todosLosPokemones = await Promise.all(data); // Guardamos todos los pokemones
+
+            // Pausa falsa para que se alcance a ver el loading
+            setTimeout(() => {
+            console.log("Pausa falsa");
+            loading.style.display = 'none'; // Escondemos el loading xD
+            appendCard(todosLosPokemones);
+            // Agregar evento de búsqueda al coso sino no buscaba nada
+            document.getElementById('palabra-filtro').addEventListener('input', filtrarPorNombre);
+            }, 1000);
+            
+        } catch (error) {
+            console.error("Error?:", error);
+            loading.style.display = 'none'; // Escondemos el loading xD
+            pokemonContainer.innerHTML = '<p class="text-center text-red-500">Error al cargar los Pokemon</p>';
+        }
+    });
+
+    // Función para filtrar
+    function filtrarPorNombre() {
+        const busqueda = document.getElementById('palabra-filtro').value.toLowerCase();
+        
+        const pokemonFiltrados = todosLosPokemones.filter(pokemon => 
+            pokemon.name.toLowerCase().includes(busqueda)
+        );
+        
+        appendCard(pokemonFiltrados);        
+
+        const pokemonContainer = document.getElementById('pokemon-container');
+        if (pokemonFiltrados.length === 0) {
+            pokemonContainer.innerHTML = '<p class="text-center text-gray-500">No se encontraron pokemones con el nombre ingresado :(</p>';
+        }
+    }
+
+    // Función para agregar tarjetas al div
+    function appendCard(pokemonList) {
+        const pokemonContainer = document.getElementById('pokemon-container');
+        pokemonContainer.innerHTML = '';
+        
+        pokemonList.forEach(pokemon => {
+            const card = crearPokemonHTML(pokemon);
+            pokemonContainer.appendChild(card);
+        });
+    }
+
+    function crearPokemonHTML(pokemon) {
+            // Crear la tarjeta del Pokémon como un div y añadir las clases con tailwind
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1';
+            
+            // Obtener los tipos del Pokémon
+            const types = pokemon.types.map(type => type.type.name);
+            //console.log(types);
+            // El tipo principal es el primer tipo en el array
+            const mainType = types[0];
+            
+            // Definir los colores de los tipos para ocupar en la card que se genera 
+            const coloresPokemones = {
+                normal: '#A8A878',
+                fire: '#F08030',
+                water: '#6890F0',
+                grass: '#78C850',
+                electric: '#F8D030',
+                ice: '#98D8D8',
+                fighting: '#C03028',
+                poison: '#A040A0',
+                ground: '#E0C068',
+                flying: '#A890F0',
+                psychic: '#F85888',
+                bug: '#A8B820',
+                rock: '#B8A038',
+                ghost: '#705898',
+                dragon: '#7038F8',
+                dark: '#705848',
+                steel: '#B8B8D0',
+                fairy: '#EE99AC'
+            };
+
+            console.log(pokemon)
+            console.log(pokemon.sprites)
+            console.log(pokemon.sprites.other['official-artwork'].front_default)
+
+            // Crear el contenido de la tarjeta del Pokémon
+            card.innerHTML = `
+                <div class="p-4 text-white" style="background-color: ${coloresPokemones[mainType]}">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-bold capitalize">${pokemon.name}</h2>
+                        <span class="font-bold">#${pokemon.id.toString()}</span>
+                    </div>
+                </div>
+                <div class="p-4 flex flex-col items-center">
+                    <img src="${pokemon.sprites.other['official-artwork'].front_default || pokemon.sprites.front_default}" 
+                         alt="${pokemon.name}" 
+                         class="w-32 h-32 object-contain">
+                    <div class="mt-4 flex gap-2 justify-center">
+                        <!-- Mapear cada tipo del pokemon para mostrarlo -->
+                        ${types.map(type => `
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold capitalize text-white" 
+                                  style="background-color: ${coloresPokemones[type]}">
+                                ${type}
+                            </span>
+                        `)}
+                    </div>
+                    <div class="mt-4 w-full">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="text-center">
+                                <p class="text-gray-600 text-sm">Altura</p>
+                                <p class="font-semibold">${(pokemon.height / 10)} m</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-gray-600 text-sm">Peso</p>
+                                <p class="font-semibold">${(pokemon.weight / 10)} kg</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Agregar evento de clic para mostrar la animacion
+            card.addEventListener('click', () => {
+                showPokemonModal(pokemon, coloresPokemones);
+            });
+            return card;
+        }
+
+        // Función para mostrar las stats del pokemon
+        // Recibe el pokemon como array y sus colores como argumento
+        function showPokemonModal(pokemon, coloresPokemones) {
+            const modalContainer = document.getElementById('stats-container');
+            const pokeball = document.querySelector('.pokeball');
+            const pokemonInfo = document.getElementById('pokemon-info');
+            const modalPokemonName = document.getElementById('stats-pokemon-name');
+            const modalPokemonImage = document.getElementById('stats-pokemon-image');
+            const modalPokemonTypes = document.getElementById('stats-pokemon-types');
+            const modalPokemonHeight = document.getElementById('stats-pokemon-height');
+            const modalPokemonWeight = document.getElementById('stats-pokemon-weight');
+            const modalPokemonStats = document.getElementById('stats-pokemon-stats');
+
+
+            modalPokemonImage.src = pokemon.sprites.other['official-artwork'].front_default || pokemon.sprites.front_default;
+            
+            // Resetea las stats en caso de 
+            pokeball.style.display = 'block';
+            pokemonInfo.style.opacity = '0';
+            modalContainer.classList.remove('hidden');
+            
+            // Se mapean los tipos para mostrarlos
+            modalPokemonTypes.innerHTML = '';
+            pokemon.types.forEach(typeInfo => {
+                const type = typeInfo.type.name;
+                const typeSpan = document.createElement('span');
+                typeSpan.className = 'px-3 py-1 rounded-full text-xs font-semibold capitalize text-white';
+                typeSpan.style.backgroundColor = coloresPokemones[type];
+                typeSpan.textContent = type;
+                modalPokemonTypes.appendChild(typeSpan);
+            });
+            
+            // Configurar las estadísticas
+            modalPokemonStats.innerHTML = '';
+            pokemon.stats.forEach(stat => {
+                const statDiv = document.createElement('div');
+                statDiv.className = 'flex flex-col';
+                
+                const statName = stat.stat.name.replace('-', ' ');
+                const capitalizedStatName = statName.split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+                
+                statDiv.innerHTML = `
+                    <span class="text-sm">${capitalizedStatName}</span>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-red-600 h-2.5 rounded-full" style="width: ${Math.min(100, (stat.base_stat / 255) * 100)}%"></div>
+                    </div>
+                    <span class="text-xs text-right">${stat.base_stat}</span>
+                `;
+                
+                modalPokemonStats.appendChild(statDiv);
+            });
+            
+            // Mostrar pokeball y animar
+            pokeball.style.display = 'block';
+            pokeball.classList.add('animate');
+            
+            // Single animation sequence with proper timing
+            setTimeout(() => {
+                pokeball.classList.remove('animate');
+                pokeball.style.display = 'none';
+                pokemonInfo.style.opacity = '1';
+            }, 4500);
+            setTimeout(() => {
+                pokeball.style.transform = 'rotate(360deg)';
+                setTimeout(() => {
+                    pokeball.style.transform = 'rotate(0deg)';
+                    pokeball.style.display = 'none';
+                    pokemonInfo.style.opacity = '1';
+                }, 3000);
+            })
+        }
+        // Añadir el listener para poder cerrar las stats
+        document.getElementById('close-stats').addEventListener('click', () => {
+            const statsContainer = document.getElementById('stats-container');
+            const pokeball = document.querySelector('.pokeball');
+            const pokemonInfo = document.getElementById('pokemon-info');
+            
+            pokemonInfo.style.opacity = '0';
+            pokeball.style.display = 'none';
+            statsContainer.classList.add('hidden');
+        });
+        </script>
+
+
+<style>
+    .monserrat {
+        font-family: 'Montserrat', sans-serif; 
+    }
+
+    /* NO LA HICE YO, EL DISEÑO LO ENCONTRE EN https://codepen.io/raubaca/pen/obaZmG */
+    /* NO LA HICE YO, EL DISEÑO LO ENCONTRE EN https://codepen.io/raubaca/pen/obaZmG */
+    /* NO LA HICE YO, EL DISEÑO LO ENCONTRE EN https://codepen.io/raubaca/pen/obaZmG */
+    /* NO LA HICE YO, EL DISEÑO LO ENCONTRE EN https://codepen.io/raubaca/pen/obaZmG */
+    .pokeball {
+        display: none; 
+        width: 192px;
+        height: 192px;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1000;
+        background: radial-gradient(
+            white 16px,
+            black 17px 18px,
+            white 19px 24px,
+            black 25px 32px,
+            transparent 33px
+        ),
+        linear-gradient(
+            to bottom, 
+            red 0 80px, 
+            black 81px 96px, 
+            white 97px 100%
+        );
+        border-radius: 50%;
+        border: 8px solid black;
+        box-shadow: inset -16px -8px 0 0 rgba(0, 0, 0, 0.2);
+        animation: none;
+    }
+
+    .pokeball.animate {
+        animation: fall 0.5s ease-in-out,
+                  shake 1.25s cubic-bezier(0.36, 0.07, 0.19, 0.97) 0.5s 3,
+                  catch 0.5s ease-out 4.25s forwards;
+        transform-origin: center center;
+    }
+
+    @keyframes shake {
+        0% { transform: translate(-50%, -50%) rotate(0); }
+        20% { transform: translate(-50%, -50%) translateX(-10px) rotate(-20deg); }
+        30% { transform: translate(-50%, -50%) translateX(10px) rotate(20deg); }
+        50% { transform: translate(-50%, -50%) translateX(-10px) rotate(-10deg); }
+        60% { transform: translate(-50%, -50%) translateX(10px) rotate(10deg); }
+        100% { transform: translate(-50%, -50%) rotate(0); }
+    }
+
+    @keyframes fall {
+        0% { transform: translate(-50%, -200%); }
+        60% { transform: translate(-50%, -50%); }
+        80% { transform: translate(-50%, -55%); }
+        100% { transform: translate(-50%, -50%); }
+    }
+
+    @keyframes catch {
+        to { filter: saturate(0.8) brightness(0.8); }
+    }
+</style>
+
+</html>
