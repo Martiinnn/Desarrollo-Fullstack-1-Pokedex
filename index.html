@@ -281,22 +281,14 @@
             
             // Mostrar pokeball y animar
             pokeball.style.display = 'block';
-            pokeball.classList.add('animate');
-            
+            pokeball.classList.add('animate');            
+
             // Animaciones con timeout  
             setTimeout(() => {
                 pokeball.classList.remove('animate');
                 pokeball.style.display = 'none';
                 pokemonInfo.style.opacity = '1';
             }, 4500);
-            setTimeout(() => {
-                pokeball.style.transform = 'rotate(360deg)';
-                setTimeout(() => {
-                    pokeball.style.transform = 'rotate(0deg)';
-                    pokeball.style.display = 'none';
-                    pokemonInfo.style.opacity = '1';
-                }, 3000);
-            })
         }
         // Añadir el listener para poder cerrar las stats
         document.getElementById('close-stats').addEventListener('click', () => {
